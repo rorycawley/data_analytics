@@ -1,3 +1,7 @@
+# generated
+data/ingestion/duckdb/*.duckdb
+data/ingestion/duckdb/*.parquet
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -70,6 +74,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+
 
 # PyBuilder
 .pybuilder/
