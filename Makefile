@@ -73,4 +73,5 @@ restart: down up
 clean: down
 	@echo "Removing the Docker volume for Postgres data..."
 	docker system prune -f
+	rm ./data/ingestion/duckdb/*.duckdb
 	@echo "Volume removed."
