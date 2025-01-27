@@ -1,5 +1,6 @@
 # generated
 data/ingestion/duckdb/*.duckdb
+data/ingestion/duckdb/*.parquet
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

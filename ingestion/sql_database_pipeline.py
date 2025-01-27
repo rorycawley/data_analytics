@@ -393,8 +393,90 @@ def load_entire_database() -> None:
 #     info = pipeline.run(sql_alchemy_source)
 #     print(info)
 
+def export_to_parquet() -> None:
+    """Export companies and directors data to a single Parquet file with error handling."""
+    db_path = "/app/data/duckdb/companies_db.duckdb"
+    output_dir = "/app/data/duckdb"
+    output_path = f"{output_dir}/companies_db.parquet"
+
+    # Ensure output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+
+    try:
+        with duckdb.connect(db_path) as conn:
+            # First verify we can access the tables
+            company_count = conn.execute("""
+                SELECT count(*) as company_count 
+                FROM companies_db.companies_db_data.companies;
+            """).fetchone()[0]
+            print(f"Found {company_count} companies in database")
+
+            # Now execute the export query
+            conn.execute(f"""
+                COPY (
+                    SELECT 
+                        company_id,
+                        name,
+                        incorporation_date,
+                        address,
+                        revenue,
+                        profit,
+                        NULL as director_id,
+                        NULL as appointment_date,
+                        NULL as nationality,
+                        NULL as position,
+                        NULL as country,
+                        NULL as location,
+                        NULL as risk_level,
+                        'companies' as table_source
+                    FROM companies_db.companies_db_data.companies
+                    
+                    UNION ALL
+                    
+                    SELECT 
+                        company_id,
+                        name,
+                        NULL as incorporation_date,
+                        NULL as address,
+                        NULL as revenue,
+                        NULL as profit,
+                        director_id,
+                        appointment_date,
+                        nationality,
+                        NULL as position,
+                        NULL as country,
+                        NULL as location,
+                        NULL as risk_level,
+                        'directors' as table_source
+                    FROM companies_db.companies_db_data.directors
+                ) TO '{output_path}' (FORMAT 'parquet', COMPRESSION 'SNAPPY')
+            """)
+
+            # Verify the file was created
+            if os.path.exists(output_path):
+                file_size = os.path.getsize(output_path)
+                print(f"Successfully created Parquet file at {output_path}")
+                print(f"File size: {file_size/1024/1024:.2f} MB")
+            else:
+                raise FileNotFoundError(
+                    f"Export completed but file not found at {output_path}")
+
+    except duckdb.Error as e:
+        print(f"DuckDB error occurred: {str(e)}")
+        raise
+    except Exception as e:
+        print(f"An error occurred during export: {str(e)}")
+        raise
+
 
 if __name__ == "__main__":
     # Load all tables from the database.
     # Warning: The sample database is very large
+    print("\nMigrating data from registry database...")
     load_entire_database()
+    print("Migration complete")
+
+    # Export to Parquet
+    print("\nExporting to Parquet...")
+    export_to_parquet()
+    print("Parquet export complete")
