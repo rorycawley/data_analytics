@@ -64,7 +64,8 @@ ps:
 # Open a psql shell inside the running postgres container.
 shell-postgres:
 	@echo "Opening a psql shell inside the postgres container..."
-	docker compose exec companies_registry_db psql -U ${POSTGRES_USER} -d ${POSTGRES_DB}
+	@docker compose exec companies_registry_db psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} || echo "Failed to connect to database"
+
 
 restart: down up
 
