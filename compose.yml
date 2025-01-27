@@ -1,0 +1,71 @@
+services:
+  # PostgreSQL database service
+  companies_registry_db:
+    container_name: companies_registry_db
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=companies_registry_db
+    # Expose the DB port externally
+    # ports:
+    #   - "${POSTGRES_PORT}:5432"
+    expose:
+      - "5432"    
+    # Mount a volume to persist data and use the init script
+    volumes:
+      - company_registry_db_data:/var/lib/postgresql/data
+      - ./data/synthetic/companies_registry_db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h companies_registry_db -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    tmpfs:
+      - /tmp    
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    networks:
+      - data_analytics_network
+
+  # Data ingestion service
+  # data_ingestion:
+  #   build:
+  #     context: ./data_ingestion
+  #     dockerfile: Dockerfile
+  #   container_name: data_ingestion
+  #   Pass environment variables directly, rather than relying on .env
+  #   environment:
+  #     - POSTGRES_USER=${POSTGRES_USER}
+  #     - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+  #     - POSTGRES_DB=${POSTGRES_DB}
+  #     - POSTGRES_PORT=${POSTGRES_PORT}
+  # Important: This host should match the Docker Compose service name "companies_registry_db".
+  # If you want to use "localhost", you must run the ingestion container on the host network,
+  # or do port forwarding. Usually "companies_registry_db" is simpler inside Docker Compose.
+  #     - POSTGRES_HOST=companies_registry_db  # Use the service name for inter-container communication
+  #   depends_on:
+  #     companies_registry_db:
+  #       condition: service_healthy
+  #   restart: on-failure
+  #   networks:
+  #     - data_analytics_network
+  #   # If you want the data ingestion to run only once and exit, uncomment the following lines:
+  #   # command: ["python", "-m", "app.main"]
+  #   # restart: "no"
+
+# Define a network for inter-container communication
+networks:
+  data_analytics_network:
+    driver: bridge
+    # external: true # Uncomment if you need external access to this network
+
+# Define a named volume for PostgreSQL data persistence
+volumes:
+  company_registry_db_data:

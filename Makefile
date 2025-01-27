@@ -1,4 +1,7 @@
-.PHONY: help build up down logs test clean shell-ingestion shell-postgres
+.PHONY: help build up down logs test ps restart clean shell-ingestion shell-postgres
+
+include .env
+export
 
 # Default target when 'make' is executed without arguments.
 default: help
@@ -11,6 +14,7 @@ help:
 	@echo "  make down             - Stop and remove the Docker containers, networks, and volumes."
 	@echo "  make logs             - View the logs of all services. Use 'make logs | grep <service>' to filter."
 	@echo "  make test             - Run the test suite (database and ingestion logic tests)."
+	@echo "  make ps               - List the running Docker containers associated with this project."
 	@echo "  make clean            - Clean up build artifacts and temporary files (DOES NOT touch 'data')."
 	@echo "  make shell-ingestion  - Open a shell inside the running data_ingestion container."
 	@echo "  make shell-postgres   - Open a psql shell inside the running postgres container."
@@ -52,13 +56,20 @@ test:
 	@echo "Running tests..."
 	@echo "Tests finished."
 
+# List the running Docker containers for this project.
+ps:
+	@echo "Listing running Docker containers:"
+	docker compose ps
+
 # Open a psql shell inside the running postgres container.
 shell-postgres:
 	@echo "Opening a psql shell inside the postgres container..."
-	docker exec -it postgres psql -U $$(docker compose config --format env | grep POSTGRES_USER | cut -d '=' -f 2) -d $$(docker compose config --format env | grep POSTGRES_DB | cut -d '=' -f 2)
+	docker compose exec companies_registry_db psql -U ${POSTGRES_USER} -d ${POSTGRES_DB}
+
+restart: down up
 
 # Clean up build artifacts and temporary files.
-clean:
+clean: down
 	@echo "Removing the Docker volume for Postgres data..."
-	docker volume rm data_analytics_db_data || true
-	@echo "Volume removed. Synthetic data in ./data remains intact."
+	docker system prune -f
+	@echo "Volume removed."
